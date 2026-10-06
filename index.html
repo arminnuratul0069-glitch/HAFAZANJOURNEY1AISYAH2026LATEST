@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perjalanan Hafazan Kelas 1 Aisyah</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti Library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        fredoka: ['Fredoka', 'sans-serif'],
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f0fdf4; }
+        .font-game { font-family: 'Fredoka', cursive; }
+        
+        .map-world {
+            background: linear-gradient(180deg, #38bdf8 0%, #bae6fd 35%, #86efac 35%, #4ade80 100%);
+            position: relative;
+            min-width: 1000px;
+            min-height: 650px;
+            overflow: hidden;
+            border-radius: 24px;
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.1);
+        }
+
+        @keyframes float-bounce {
+            0%, 100% { transform: translateY(0px) scale(1); }
+            50% { transform: translateY(-8px) scale(1.05); }
+        }
+        .bounce-avatar { animation: float-bounce 2.5s infinite ease-in-out; }
+        
+        .path-line {
+            stroke-dasharray: 12, 12;
+            animation: dash 30s linear infinite;
+        }
+        @keyframes dash {
+            to { stroke-dashoffset: -1000; }
+        }
+
+        .map-token {
+            transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; color: black; }
+            .card-print { border: 1px solid #ccc; break-inside: avoid; page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col selection:bg-yellow-300">
+
+    <!-- TOP HEADER / NAVBAR -->
+    <header class="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white shadow-lg no-print sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white/20 p-2.5 rounded-2xl backdrop-blur-md text-2xl">
+                    🌈
+                </div>
+                <div>
+                    <h1 class="font-game text-xl md:text-2xl font-bold tracking-wide flex items-center gap-2">
+                        PERJALANAN HAFAZAN KELAS 1 AISYAH
+                    </h1>
+                    <p class="text-xs text-emerald-100 hidden sm:block">
+                        “Setiap anak mempunyai perjalanan masing-masing. Teruskan langkah sedikit demi sedikit. 🌱”
+                    </p>
+                </div>
+            </div>
+
+            <!-- Role Switcher & Login -->
+            <div class="flex items-center space-x-2">
+                <div id="authStatusBadge" class="text-xs bg-emerald-800/60 backdrop-blur-sm text-emerald-200 px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-emerald-500/30">
+                    <span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
+                    <span id="roleLabel">Mod Modul: Ustazah / Demo</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- NAVIGATION TABS -->
+    <nav id="teacherNavTabs" class="bg-white border-b border-emerald-100 shadow-sm no-print">
+        <div class="max-w-7xl mx-auto px-4 flex space-x-1 overflow-x-auto py-2">
+            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 bg-emerald-100 text-emerald-800">
+                <i class="fa-solid fa-table-columns"></i> Dashboard Kelas
+            </button>
+            <button onclick="switchTab('map')" id="tab-map" class="tab-btn px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 text-slate-600 hover:bg-slate-100">
+                <i class="fa-solid fa-map-location-dot"></i> 🗺️ Peta Perjalanan
+            </button>
+            <button onclick="switchTab('stats')" id="tab-stats" class="tab-btn px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 text-slate-600 hover:bg-slate-100">
+                <i class="fa-solid fa-chart-pie"></i> Statistik Kelas
+            </button>
+            <div class="ml-auto flex items-center space-x-2">
+                <button onclick="exportDataJSON()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1">
+                    <i class="fa-solid fa-download"></i> Backup JSON
+                </button>
+                <button onclick="window.print()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1">
+                    <i class="fa-solid fa-print"></i> Cetak
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
+
+        <!-- ==================== 1. TEACHER DASHBOARD VIEW ==================== -->
+        <section id="view-dashboard" class="space-y-6">
+            <!-- Search & Filter Bar -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-100 flex flex-col sm:flex-row gap-4 justify-between items-center no-print">
+                <div class="relative w-full sm:w-96">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="searchInput" oninput="handleSearch()" placeholder="🔎 Cari nama murid..." 
+                           class="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-sm">
+                </div>
+                
+                <div class="flex items-center gap-3 text-xs font-semibold text-slate-600 flex-wrap">
+                    <span class="flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-lg">🩶 Belum Tasmik</span>
+                    <span class="flex items-center gap-1 bg-amber-100 text-amber-800 px-2.5 py-1 rounded-lg">🟨 Perlu Ulang</span>
+                    <span class="flex items-center gap-1 bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg">🟩 Lulus</span>
+                </div>
+            </div>
+
+            <!-- Student List Grid -->
+            <div id="studentListGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Dynamically generated student cards -->
+            </div>
+        </section>
+
+        <!-- ==================== 2. MAP / BOARD GAME VIEW ==================== -->
+        <section id="view-map" class="hidden space-y-4">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-100 flex justify-between items-center flex-wrap gap-2 no-print">
+                <div>
+                    <h2 class="font-game text-lg text-emerald-800">🗺️ DUNIA PETA PERJALANAN HAFAZAN</h2>
+                    <p class="text-xs text-slate-500">33 Perjalanan Anak-Anak Syurga Kelas 1 Aisyah</p>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto rounded-3xl border-4 border-amber-300 shadow-xl bg-slate-900">
+                <div class="map-world p-6 relative select-none">
+                    <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1000 650" preserveAspectRatio="none">
+                        <path id="adventurePath" d="M 80,550 C 200,550 250,450 180,360 C 110,270 200,180 350,220 C 500,260 450,480 600,480 C 750,480 720,280 820,200 C 880,150 900,100 900,100" 
+                              fill="none" stroke="#fde047" stroke-width="28" stroke-linecap="round"/>
+                        <path d="M 80,550 C 200,550 250,450 180,360 C 110,270 200,180 350,220 C 500,260 450,480 600,480 C 750,480 720,280 820,200 C 880,150 900,100 900,100" 
+                              fill="none" stroke="#eab308" stroke-width="18" stroke-linecap="round" class="path-line"/>
+                    </svg>
+
+                    <div id="mapCheckpointsContainer"></div>
+                    <div id="mapAvatarsLayer" class="relative z-20"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== 3. STATISTICAL VIEW ==================== -->
+        <section id="view-stats" class="hidden space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+                    <div class="p-3 bg-blue-100 text-blue-600 rounded-xl text-2xl"><i class="fa-solid fa-users"></i></div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold">Jumlah Murid</p>
+                        <h3 id="statTotalStudents" class="text-2xl font-bold font-game text-slate-800">33</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+                    <div class="p-3 bg-emerald-100 text-emerald-600 rounded-xl text-2xl"><i class="fa-solid fa-circle-check"></i></div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold">Jumlah Surah Lulus</p>
+                        <h3 id="statTotalPassed" class="text-2xl font-bold font-game text-emerald-600">0</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+                    <div class="p-3 bg-amber-100 text-amber-600 rounded-xl text-2xl"><i class="fa-solid fa-rotate-left"></i></div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold">Perlu Ulang</p>
+                        <h3 id="statTotalRepeat" class="text-2xl font-bold font-game text-amber-600">0</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+                    <div class="p-3 bg-purple-100 text-purple-600 rounded-xl text-2xl"><i class="fa-solid fa-trophy"></i></div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold">Tamat 10 Surah</p>
+                        <h3 id="statTotalCompleted" class="text-2xl font-bold font-game text-purple-600">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <h3 class="font-game text-lg text-slate-800 mb-4">📊 Peratus Kemajuan Kelas Keseluruhan</h3>
+                <div class="w-full bg-slate-100 h-6 rounded-full overflow-hidden p-1">
+                    <div id="overallProgressBar" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-500" style="width: 0%;"></div>
+                </div>
+                <p id="overallProgressText" class="text-right text-xs font-bold text-slate-600 mt-2">0% Selesai</p>
+            </div>
+        </section>
+
+        <!-- ==================== 4. PARENT VIEWER MODE ==================== -->
+        <section id="view-parent" class="hidden space-y-6 max-w-xl mx-auto">
+            <div class="bg-gradient-to-b from-sky-400 via-sky-300 to-emerald-200 p-6 rounded-3xl shadow-xl text-center relative overflow-hidden">
+                <div class="inline-block bg-white/80 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-emerald-800 mb-2">
+                    🌈 PERJALANAN HAFAZAN KELAS 1 AISYAH
+                </div>
+                
+                <div class="relative w-24 h-24 mx-auto mb-3">
+                    <img id="parentStudentAvatar" src="" alt="Avatar" class="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md">
+                    <span id="parentBadgeStatus" class="absolute bottom-0 right-0 text-xl">🌱</span>
+                </div>
+
+                <h2 id="parentStudentName" class="font-game text-xl font-bold text-slate-900 leading-tight"></h2>
+                <p id="parentProgressText" class="text-sm font-semibold text-emerald-900 mt-1">0/10 Surah Selesai</p>
+
+                <div class="w-full bg-white/60 h-4 rounded-full mt-3 p-0.5 overflow-hidden">
+                    <div id="parentProgressBar" class="bg-emerald-600 h-full rounded-full transition-all duration-500" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <div id="parentNotesContainer" class="bg-amber-50 border border-amber-200 p-5 rounded-2xl shadow-sm space-y-3">
+                <h3 class="font-game text-amber-900 text-sm flex items-center gap-2">
+                    📝 Nota Ustazah
+                </h3>
+                <p id="parentNotesText" class="text-xs text-slate-700 italic">Tiada nota khas dari ustazah.</p>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-3">
+                <h3 class="font-game text-slate-800 text-sm">📚 Senarai 10 Surah Hafazan</h3>
+                <div id="parentSurahList" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+            </div>
+
+            <div class="text-center pt-4 no-print">
+                <button onclick="exitParentMode()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs">
+                    ⬅️ Kembali ke Menu Utama
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- STUDENT PROFILE MODAL -->
+    <div id="studentProfileModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 p-6 space-y-6">
+            <div class="flex justify-between items-start border-b pb-4">
+                <div class="flex items-center space-x-4">
+                    <img id="modalAvatarImg" src="" class="w-16 h-16 rounded-full object-cover border-2 border-emerald-500 shadow">
+                    <div>
+                        <h2 id="modalStudentName" class="font-game text-lg font-bold text-slate-800"></h2>
+                        <p id="modalStudentBadge" class="text-xs font-semibold text-emerald-600"></p>
+                    </div>
+                </div>
+                <button onclick="closeProfileModal()" class="text-slate-400 hover:text-slate-600 text-xl p-1">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- PARENT LINK SECTION (YANG TELAH DIPERBAIKI) -->
+            <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-200 space-y-2">
+                <div class="flex items-center justify-between gap-2 flex-wrap text-xs">
+                    <span class="font-bold text-emerald-800 flex items-center gap-1">
+                        <i class="fa-solid fa-link"></i> Pautan Parent Viewer:
+                    </span>
+                    <div class="flex items-center gap-2">
+                        <button id="copyBtn" onclick="copyParentLink()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg transition text-xs flex items-center gap-1">
+                            <i class="fa-solid fa-copy"></i> Salin Link
+                        </button>
+                        <button onclick="previewParentView()" class="bg-sky-500 hover:bg-sky-600 text-white font-bold px-3 py-1.5 rounded-lg transition text-xs flex items-center gap-1">
+                            <i class="fa-solid fa-eye"></i> Preview View
+                        </button>
+                    </div>
+                </div>
+                <!-- PAPARAN PAUTAN SECARA VISUAL -->
+                <input type="text" id="parentLinkDisplay" readonly class="w-full p-2 bg-white border border-emerald-300 rounded-lg text-[11px] text-slate-600 font-mono focus:outline-none select-all" value="">
+            </div>
+
+            <div class="space-y-3">
+                <h3 class="font-game text-sm text-slate-700">📚 Status Tasmik Surah</h3>
+                <div id="modalSurahList" class="space-y-2"></div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="font-game text-sm text-slate-700 block">📝 Nota Ustazah buat Ibu Bapa</label>
+                <textarea id="modalTeacherNotes" rows="3" placeholder="Masukkan pesanan khas buat ibu bapa..." 
+                          class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+            </div>
+
+            <div class="flex justify-end space-x-2 border-t pt-4">
+                <button onclick="closeProfileModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs">
+                    Tutup
+                </button>
+                <button onclick="saveStudentNotes()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2 rounded-xl text-xs shadow">
+                    Simpan Nota
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS LOGIC -->
+    <script>
+        const SURAH_LIST = [
+            "Al-Fatihah", "An-Nas", "Al-Falaq", "Al-Ikhlas", "Al-Lahab",
+            "An-Nasr", "Al-Kafirun", "Al-Kauthar", "Al-Ma’un", "Quraisy"
+        ];
+
+        const CHECKPOINTS = [
+            { id: 0, title: "🌱 START", x: 80, y: 550 },
+            { id: 1, title: "1. Grassland", x: 180, y: 480 },
+            { id: 2, title: "2. Forest", x: 180, y: 360 },
+            { id: 3, title: "3. Bridge", x: 260, y: 220 },
+            { id: 4, title: "4. River", x: 420, y: 320 },
+            { id: 5, title: "5. Hill", x: 520, y: 480 },
+            { id: 6, title: "6. Rainbow Valley", x: 680, y: 440 },
+            { id: 7, title: "7. Cloud Area", x: 750, y: 280 },
+            { id: 8, title: "8. Castle Road", x: 820, y: 200 },
+            { id: 9, title: "9. Final Path", x: 870, y: 140 },
+            { id: 10, title: "10. 🏆 Hafazan Castle", x: 900, y: 90 }
+        ];
+
+        const DEFAULT_STUDENTS_LIST = [
+            "SYED HUDZAYFAH BIN WAN MOHD. ZULHEIMY", "NUR IZZAH BINTI HANAFI", "FALEESYA MIKAYLA BT MOHD FAIZZ",
+            "AWANG MUHAMMAD DARZRIN UMAR BIN AWANG AFFENDI", "UZAIR UKASYAH BIN ABDUL RAZIF", "AFIF BIN NUR MISUARI",
+            "AMMAR ZAFRAN BIN HASAN", "ALESHA SAFIYYA BINTI MUHAMMAD DINIEY ASYRAF", "AQEELA NUR UQASHA BINTI MOHD FADLY",
+            "AISY ARSYAD BIN MOHAMAD NAZRUL", "AMMAR SADDIQ BIN MOHD SUHAIMI", "ASHURA BINTI ABU DAUD",
+            "ABDULLAH UMAR BIN ABDUL AZIS", "ELIZA BINTI IZZUDIN", "NUSAYBA BINTI MOHAMMAD SAJAD",
+            "AHMAD REEZQI BIN AHMAD RITHAUDEEN", "HANEEN AAFIYA BINTI MOHAMMED HASIF", "NUR AQEELA SOFEA BINTI MOHD ZURAIMI",
+            "NUR RAIQA NAZEEYA BT NAZRI", "KHAIRA NUR ADRA BINTI KHAIRIL REDZUAN", "ZARA AAIRA AFEEYA BINTI MOHD KHAIRUL ANUAR",
+            "MUHAMMAD ZAIM SYUIB BIN MOHD ISA", "ARYAN ZIKRY BIN ADIB", "MUHAMMAD AFI AKRAM BIN ZECHARIAH",
+            "ZHAFEERA SOPHEA BINTI MOHAMMAD KHAIRUSRIZUAN", "KASIH KHADEEJA BINTI ABDUL WAHAB", "ADHWA DZIHNI BINTI MUHAMMAD SYAZWAN",
+            "AMMAR FATEH BIN AZIZI AKRAMIN", "NUR HANUM BINTI KAUTSAR", "MUHAMMAD IZZ RIZQ BIN SALEM",
+            "IRSYAD ZAIM BIN ZURHIJJAS", "AISYAH BINTI AHMAD MUJAHID", "AMMARA ZULAIKHA BINTI ZULFADLY"
+        ];
+
+        let studentsData = {};
+        let activeStudentId = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadInitialData();
+            checkUrlParameters();
+        });
+
+        function loadInitialData() {
+            const localData = localStorage.getItem('hafazan_1aisyah_data_v2');
+            if (localData) {
+                studentsData = JSON.parse(localData);
+            } else {
+                seedDefaultData();
+            }
+            renderAll();
+        }
+
+        function seedDefaultData() {
+            let initialObj = {};
+            DEFAULT_STUDENTS_LIST.forEach((fullName, index) => {
+                const id = "std_" + (index + 1);
+                let surahs = {};
+                SURAH_LIST.forEach((s, idx) => {
+                    surahs['s' + idx] = { name: s, status: 'GRAY', date: '', notes: '' };
+                });
+                initialObj[id] = {
+                    id: id,
+                    name: fullName,
+                    avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(fullName)}`,
+                    surahs: surahs,
+                    notes: ''
+                };
+            });
+            studentsData = initialObj;
+            saveLocalData();
+        }
+
+        function saveLocalData() {
+            localStorage.setItem('hafazan_1aisyah_data_v2', JSON.stringify(studentsData));
+        }
+
+        function calculateProgress(surahs) {
+            let green = 0, yellow = 0, gray = 0;
+            Object.values(surahs || {}).forEach(s => {
+                if (s.status === 'GREEN') green++;
+                else if (s.status === 'YELLOW') yellow++;
+                else gray++;
+            });
+            return { green, yellow, gray, percent: Math.round((green / 10) * 100) };
+        }
+
+        function getStatusBadgeText(greenCount) {
+            if (greenCount === 0) return '🌱 Baru Bermula';
+            if (greenCount <= 3) return '🌿 Sedang Berkembang';
+            if (greenCount <= 6) return '⭐ Semakin Hampir';
+            if (greenCount <= 9) return '🌟 Hampir Tamat';
+            return '🏆 Tamat Hafazan';
+        }
+
+        function getStatusInfo(surahObj) {
+            if (!surahObj) return { code: 'GRAY', icon: '🩶', text: 'Belum Tasmik', bg: 'bg-slate-100', textCol: 'text-slate-600' };
+            switch(surahObj.status) {
+                case 'GREEN': return { code: 'GREEN', icon: '🟩', text: 'Sudah Tasmik / Lulus', bg: 'bg-emerald-100', textCol: 'text-emerald-700' };
+                case 'YELLOW': return { code: 'YELLOW', icon: '🟨', text: 'Perlu Ulang', bg: 'bg-amber-100', textCol: 'text-amber-700' };
+                default: return { code: 'GRAY', icon: '🩶', text: 'Belum Tasmik', bg: 'bg-slate-100', textCol: 'text-slate-600' };
+            }
+        }
+
+        function cycleStatus(studentId, surahKey) {
+            const currentStatus = studentsData[studentId].surahs[surahKey].status;
+            let newStatus = 'GRAY';
+            if (currentStatus === 'GRAY') newStatus = 'YELLOW';
+            else if (currentStatus === 'YELLOW') newStatus = 'GREEN';
+            else if (currentStatus === 'GREEN') newStatus = 'GRAY';
+
+            studentsData[studentId].surahs[surahKey].status = newStatus;
+            studentsData[studentId].surahs[surahKey].date = new Date().toLocaleDateString('ms-MY');
+
+            saveLocalData();
+            renderAll();
+        }
+
+        function renderAll() {
+            renderTeacherDashboard();
+            renderMap();
+            renderStats();
+        }
+
+        function renderTeacherDashboard() {
+            const grid = document.getElementById('studentListGrid');
+            const query = (document.getElementById('searchInput').value || '').toLowerCase();
+            grid.innerHTML = '';
+
+            Object.values(studentsData).forEach(student => {
+                const studentName = student.name || "NAMA MURID";
+                if (query && !studentName.toLowerCase().includes(query)) return;
+
+                const prog = calculateProgress(student.surahs);
+                const badgeText = getStatusBadgeText(prog.green);
+
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-2xl p-4 shadow-sm border border-emerald-100 space-y-3 hover:shadow-md transition card-print";
+                
+                let surahCheckpointsHTML = '<div class="grid grid-cols-5 gap-1.5">';
+                SURAH_LIST.forEach((sName, idx) => {
+                    const sKey = 's' + idx;
+                    const sObj = student.surahs[sKey];
+                    const info = getStatusInfo(sObj);
+                    surahCheckpointsHTML += `
+                        <button onclick="cycleStatus('${student.id}', '${sKey}')" 
+                                title="${sName}: ${info.text}"
+                                class="p-1.5 text-center rounded-lg text-xs font-bold transition hover:scale-105 ${info.bg} ${info.textCol}">
+                            ${info.icon}
+                        </button>
+                    `;
+                });
+                surahCheckpointsHTML += '</div>';
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-2 border-b pb-2">
+                        <div class="flex items-center space-x-3 cursor-pointer" onclick="openProfileModal('${student.id}')">
+                            <img src="${student.avatar}" class="w-10 h-10 rounded-full object-cover border border-emerald-300">
+                            <div>
+                                <h3 class="font-bold text-xs text-slate-800 line-clamp-1">${studentName}</h3>
+                                <span class="text-[10px] font-semibold text-emerald-600">${badgeText}</span>
+                            </div>
+                        </div>
+                        <button onclick="openProfileModal('${student.id}')" class="text-slate-400 hover:text-emerald-600 p-1">
+                            <i class="fa-solid fa-chevron-right text-xs"></i>
+                        </button>
+                    </div>
+
+                    ${surahCheckpointsHTML}
+
+                    <div class="flex justify-between items-center text-[11px] font-semibold text-slate-500 pt-1">
+                        <span>${prog.green}/10 Lulus</span>
+                        <div class="w-24 bg-slate-100 h-2 rounded-full overflow-hidden">
+                            <div class="bg-emerald-500 h-full" style="width: ${prog.percent}%"></div>
+                        </div>
+                        <span>${prog.percent}%</span>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function renderMap() {
+            const container = document.getElementById('mapCheckpointsContainer');
+            const avatarsLayer = document.getElementById('mapAvatarsLayer');
+            container.innerHTML = '';
+            avatarsLayer.innerHTML = '';
+
+            CHECKPOINTS.forEach((cp) => {
+                const node = document.createElement('div');
+                node.className = 'absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none';
+                node.style.left = `${cp.x}px`;
+                node.style.top = `${cp.y}px`;
+                node.innerHTML = `
+                    <div class="w-10 h-10 rounded-full bg-amber-400 border-4 border-white shadow-lg flex items-center justify-center font-bold text-xs text-amber-950 font-game">
+                        ${cp.id}
+                    </div>
+                    <span class="bg-slate-900/80 text-white text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 backdrop-blur shadow">
+                        ${cp.title}
+                    </span>
+                `;
+                container.appendChild(node);
+            });
+
+            Object.values(studentsData).forEach((student, i) => {
+                const prog = calculateProgress(student.surahs);
+                const cp = CHECKPOINTS[prog.green] || CHECKPOINTS[0];
+                
+                const offsetX = ((i % 5) - 2) * 12;
+                const offsetY = (Math.floor(i / 5) % 3 - 1) * 12;
+
+                const token = document.createElement('div');
+                token.className = 'absolute map-token cursor-pointer group';
+                token.style.left = `${cp.x + offsetX}px`;
+                token.style.top = `${cp.y + offsetY - 15}px`;
+                token.onclick = () => openProfileModal(student.id);
+
+                token.innerHTML = `
+                    <div class="relative flex flex-col items-center">
+                        <img src="${student.avatar}" class="w-8 h-8 rounded-full border-2 border-white shadow-lg object-cover bounce-avatar">
+                        <span class="hidden group-hover:block absolute -top-8 bg-black text-white text-[9px] px-2 py-0.5 rounded whitespace-nowrap z-30">
+                            ${(student.name || 'Murid').split(' ')[0]}
+                        </span>
+                    </div>
+                `;
+                avatarsLayer.appendChild(token);
+            });
+        }
+
+        function renderStats() {
+            const studentsArr = Object.values(studentsData);
+            let totalPassed = 0, totalRepeat = 0, totalCompleted = 0;
+            
+            studentsArr.forEach(s => {
+                const prog = calculateProgress(s.surahs);
+                totalPassed += prog.green;
+                totalRepeat += prog.yellow;
+                if (prog.green === 10) totalCompleted++;
+            });
+
+            document.getElementById('statTotalStudents').innerText = studentsArr.length;
+            document.getElementById('statTotalPassed').innerText = totalPassed;
+            document.getElementById('statTotalRepeat').innerText = totalRepeat;
+            document.getElementById('statTotalCompleted').innerText = totalCompleted;
+
+            const overallPct = studentsArr.length ? Math.round((totalPassed / (studentsArr.length * 10)) * 100) : 0;
+            document.getElementById('overallProgressBar').style.width = overallPct + '%';
+            document.getElementById('overallProgressText').innerText = overallPct + '% Selesai';
+        }
+
+        /* ==================== FUNGSI PARENT LINK YANG DIPERBAIKI ==================== */
+        function generateParentLink(studentId) {
+            const baseUrl = window.location.origin + window.location.pathname;
+            return `${baseUrl}?student=${studentId}`;
+        }
+
+        function openProfileModal(studentId) {
+            activeStudentId = studentId;
+            const student = studentsData[studentId];
+            const prog = calculateProgress(student.surahs);
+
+            document.getElementById('modalAvatarImg').src = student.avatar;
+            document.getElementById('modalStudentName').innerText = student.name || "NAMA MURID";
+            document.getElementById('modalStudentBadge').innerText = getStatusBadgeText(prog.green);
+            document.getElementById('modalTeacherNotes').value = student.notes || '';
+
+            // Papar Pautan Penuh dalam Textbox
+            const link = generateParentLink(studentId);
+            document.getElementById('parentLinkDisplay').value = link;
+
+            const list = document.getElementById('modalSurahList');
+            list.innerHTML = '';
+            SURAH_LIST.forEach((sName, idx) => {
+                const sKey = 's' + idx;
+                const sObj = student.surahs[sKey];
+                const info = getStatusInfo(sObj);
+
+                const row = document.createElement('div');
+                row.className = "flex items-center justify-between p-2.5 bg-slate-50 border rounded-xl text-xs";
+                row.innerHTML = `
+                    <span class="font-bold text-slate-700">${sName}</span>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-[10px] text-slate-400">${sObj.date || ''}</span>
+                        <button onclick="cycleStatus('${student.id}', '${sKey}'); openProfileModal('${student.id}')" 
+                                class="px-3 py-1 rounded-lg font-bold transition ${info.bg} ${info.textCol}">
+                            ${info.icon} ${info.text}
+                        </button>
+                    </div>
+                `;
+                list.appendChild(row);
+            });
+
+            document.getElementById('studentProfileModal').classList.remove('hidden');
+        }
+
+        function copyParentLink() {
+            if (!activeStudentId) return;
+            const link = generateParentLink(activeStudentId);
+            
+            navigator.clipboard.writeText(link).then(() => {
+                const btn = document.getElementById('copyBtn');
+                btn.innerHTML = `<i class="fa-solid fa-check"></i> Disalin!`;
+                btn.classList.replace('bg-emerald-600', 'bg-amber-500');
+                
+                setTimeout(() => {
+                    btn.innerHTML = `<i class="fa-solid fa-copy"></i> Salin Link`;
+                    btn.classList.replace('bg-amber-500', 'bg-emerald-600');
+                }, 2000);
+            }).catch(err => {
+                // Fallback jika browser menyekat clipboard API
+                const input = document.getElementById('parentLinkDisplay');
+                input.select();
+                document.execCommand('copy');
+                alert("Pautan telah disalin!");
+            });
+        }
+
+        function previewParentView() {
+            if (!activeStudentId) return;
+            closeProfileModal();
+            openParentMode(activeStudentId);
+        }
+
+        function closeProfileModal() {
+            document.getElementById('studentProfileModal').classList.add('hidden');
+        }
+
+        function saveStudentNotes() {
+            if (!activeStudentId) return;
+            studentsData[activeStudentId].notes = document.getElementById('modalTeacherNotes').value;
+            saveLocalData();
+            closeProfileModal();
+        }
+
+        function renderParentView(studentId) {
+            const student = studentsData[studentId];
+            if (!student) return;
+
+            activeStudentId = studentId;
+            const prog = calculateProgress(student.surahs);
+
+            document.getElementById('parentStudentAvatar').src = student.avatar;
+            document.getElementById('parentStudentName').innerText = student.name || "NAMA MURID";
+            document.getElementById('parentProgressText').innerText = `${prog.green}/10 Surah Selesai`;
+            document.getElementById('parentProgressBar').style.width = `${prog.percent}%`;
+            document.getElementById('parentBadgeStatus').innerText = prog.green === 10 ? '🏆' : '🌱';
+
+            const parentNotesText = document.getElementById('parentNotesText');
+            if (student.notes && student.notes.trim() !== '') {
+                parentNotesText.innerText = student.notes;
+                parentNotesText.classList.remove('italic');
+            } else {
+                parentNotesText.innerText = "Tiada nota khas dari ustazah.";
+                parentNotesText.classList.add('italic');
+            }
+
+            const parentSurahList = document.getElementById('parentSurahList');
+            parentSurahList.innerHTML = '';
+            SURAH_LIST.forEach((sName, idx) => {
+                const sObj = student.surahs['s' + idx];
+                const info = getStatusInfo(sObj);
+                const div = document.createElement('div');
+                div.className = `p-3 rounded-xl border flex items-center justify-between text-xs font-semibold ${info.bg} ${info.textCol}`;
+                div.innerHTML = `
+                    <span>${info.icon} ${sName}</span>
+                    <span class="text-[10px]">${sObj.date ? sObj.date : info.text}</span>
+                `;
+                parentSurahList.appendChild(div);
+            });
+        }
+
+        function checkUrlParameters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const studentId = urlParams.get('student');
+            if (studentId && studentsData[studentId]) {
+                openParentMode(studentId);
+            }
+        }
+
+        function openParentMode(studentId) {
+            document.getElementById('view-dashboard').classList.add('hidden');
+            document.getElementById('view-map').classList.add('hidden');
+            document.getElementById('view-stats').classList.add('hidden');
+            document.getElementById('teacherNavTabs').classList.add('hidden');
+            document.getElementById('view-parent').classList.remove('hidden');
+            renderParentView(studentId);
+        }
+
+        function exitParentMode() {
+            // Bersihkan parameter URL semasa kembali
+            window.history.pushState({}, document.title, window.location.pathname);
+            document.getElementById('teacherNavTabs').classList.remove('hidden');
+            document.getElementById('view-parent').classList.add('hidden');
+            switchTab('dashboard');
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.className = "tab-btn px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 text-slate-600 hover:bg-slate-100");
+            document.getElementById(`tab-${tab}`).className = "tab-btn px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 bg-emerald-100 text-emerald-800";
+
+            document.getElementById('view-dashboard').classList.toggle('hidden', tab !== 'dashboard');
+            document.getElementById('view-map').classList.toggle('hidden', tab !== 'map');
+            document.getElementById('view-stats').classList.toggle('hidden', tab !== 'stats');
+            document.getElementById('view-parent').classList.add('hidden');
+        }
+
+        function handleSearch() {
+            renderTeacherDashboard();
+        }
+
+        function exportDataJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(studentsData, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", `hafazan_kelas_1_aisyah_backup.json`);
+            dlAnchorElem.click();
+        }
+    </script>
+</body>
+</html>
